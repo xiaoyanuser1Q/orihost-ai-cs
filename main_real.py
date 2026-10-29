@@ -168,4 +168,6 @@ async def chat(request: Request):
 if __name__ == "__main__":
     threading.Thread(target=init_llm, daemon=True).start()
     print("[app] 小桃养成记 AI 客服启动 http://0.0.0.0:8080")
-    uvicorn.run(app, host="0.0.0.0", port=8080, log_level="info")
+    port = int(os.environ.get("SERVER_PORT", 30086))
+    print(f"[app] listening on port {port}")
+    uvicorn.run(app, host="0.0.0.0", port=port, log_level="info")
