@@ -81,6 +81,14 @@ def try_llama_cpp():
 
 def try_llama_server():
     global llm_backend, llama_server_proc
+    # 先测试二进制能否运行
+    import shutil
+    if LLAMA_SERVER_BIN.exists():
+        test = subprocess.run([str(LLAMA_SERVER_BIN), "--version"], capture_output=True, text=True, timeout=5)
+        print(f"[llm] binary test: rc={test.returncode} out={test.stdout[:100]} err={test.stderr[:200]}")
+        if test.returncode != 0:
+            print("[llm] 二进制无法运行，尝试重新下载...")
+            LLAMA_SERVER_BIN.unlink()
     if not LLAMA_SERVER_BIN.exists():
         for url in LLAMA_SERVER_URLS:
             try:
@@ -104,15 +112,20 @@ def try_llama_server():
             return False
         print(f"[llm] 二进制 {LLAMA_SERVER_BIN.stat().st_size//1024//1024}MB")
     try:
+        err_file = CHAT_DIR / "llama-server.err"
+        err_fh = open(err_file, "w")
         llama_server_proc = subprocess.Popen(
             [str(LLAMA_SERVER_BIN), "-m", str(MODEL_PATH), "--port", "8081", "-c", "256", "--threads", "2"],
-            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL, stderr=err_fh,
             cwd=str(CHAT_DIR),
         )
-        time.sleep(4)
+        time.sleep(8)
         if llama_server_proc.poll() is not None:
-            print("[llm] llama-server 启动即退出")
+            err_fh.close()
+            err_text = err_file.read_text() if err_file.exists() else ""
+            print(f"[llm] llama-server 退出 rc={llama_server_proc.returncode}: {err_text[:300]}")
             return False
+        err_fh.close()
         print("[llm] llama-server 已启动 :8081")
         llm_backend = "llama_server"
         return True
