@@ -3,7 +3,7 @@
 小桃养成记 AI 客服
 三级降级: llama-cpp-python → llama-server 二进制 → 规则引擎
 """
-import os, json, time, urllib.request, threading, subprocess, sys, tarfile, io
+import os, json, time, urllib.request, threading, subprocess, sys, tarfile, io, zipfile
 from pathlib import Path
 
 from fastapi import FastAPI, Request
@@ -15,12 +15,12 @@ app = FastAPI(title="小桃养成记 AI 客服")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 CHAT_DIR = Path("/home/container")
-MODEL_PATH = CHAT_DIR / "qwen2-0_5b-instruct-q4_k_m.gguf"
-MODEL_URL = "https://huggingface.co/Qwen/Qwen2-0.5B-Instruct-GGUF/resolve/main/qwen2-0_5b-instruct-q4_k_m.gguf"
+MODEL_PATH = CHAT_DIR / "qwen2-0_5b-instruct-q2_k.gguf"
+MODEL_URL = "https://huggingface.co/Qwen/Qwen2-0.5B-Instruct-GGUF/resolve/main/qwen2-0_5b-instruct-q2_k.gguf"
 LLAMA_SERVER_BIN = CHAT_DIR / "llama-server"
 LLAMA_SERVER_URLS = [
-    "https://github.com/ggml-org/llama.cpp/releases/download/b6471/llama-b6471-x86_64-ubuntu-gcc.tar.gz",
-    "https://github.com/ggml-org/llama.cpp/releases/download/b6462/llama-b6462-x86_64-ubuntu-gcc.tar.gz",
+    "https://github.com/ggml-org/llama.cpp/releases/download/b6471/llama-b6471-bin-ubuntu-x64.zip",
+    "https://github.com/ggml-org/llama.cpp/releases/download/b6471/llama-b6471-bin-ubuntu-x64.zip",
 ]
 
 SYSTEM_PROMPT = (
@@ -71,7 +71,7 @@ def try_llama_cpp():
             return False
     try:
         print("[llm] 加载 llama-cpp...")
-        llm = Llama(model_path=str(MODEL_PATH), n_ctx=512, n_threads=2, verbose=False)
+        llm = Llama(model_path=str(MODEL_PATH), n_ctx=256, n_threads=2, verbose=False)
         llm_backend = "llama_cpp"
         print("[llm] llama-cpp-python 加载成功")
         return True
@@ -86,15 +86,15 @@ def try_llama_server():
             try:
                 print(f"[llm] 下载 llama-server: {url.split('/')[-1]}...")
                 data = urllib.request.urlopen(url, timeout=60).read()
-                with tarfile.open(fileobj=io.BytesIO(data), mode="r:gz") as t:
-                    for m in t.getmembers():
-                        if "llama-server" in m.name and m.isfile():
-                            f = t.extractfile(m)
-                            if f:
-                                LLAMA_SERVER_BIN.write_bytes(f.read())
-                                LLAMA_SERVER_BIN.chmod(0o755)
-                                break
+                with zipfile.ZipFile(io.BytesIO(data)) as z:
+                    for name in z.namelist():
+                        if name.endswith("llama-server"):
+                            LLAMA_SERVER_BIN.write_bytes(z.read(name))
+                            LLAMA_SERVER_BIN.chmod(0o755)
+                            print(f"[llm] 解压 {name}")
+                            break
                     else:
+                        print(f"[llm] zip 里没找到 llama-server: {z.namelist()[:5]}")
                         continue
                     break
             except Exception as e:
@@ -105,7 +105,7 @@ def try_llama_server():
         print(f"[llm] 二进制 {LLAMA_SERVER_BIN.stat().st_size//1024//1024}MB")
     try:
         llama_server_proc = subprocess.Popen(
-            [str(LLAMA_SERVER_BIN), "-m", str(MODEL_PATH), "--port", "8081", "-c", "512", "--threads", "2"],
+            [str(LLAMA_SERVER_BIN), "-m", str(MODEL_PATH), "--port", "8081", "-c", "256", "--threads", "2"],
             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
             cwd=str(CHAT_DIR),
         )
