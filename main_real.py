@@ -17,7 +17,7 @@ app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], all
 CHAT_DIR = Path("/home/container")
 MODEL_PATH = CHAT_DIR / "qwen2-0_5b-instruct-q2_k.gguf"
 MODEL_URL = "https://huggingface.co/Qwen/Qwen2-0.5B-Instruct-GGUF/resolve/main/qwen2-0_5b-instruct-q2_k.gguf"
-LLAMA_SERVER_BIN = CHAT_DIR / "llama-server"
+LLAMA_BIN = CHAT_DIR / "llama-server"
 LLAMA_SERVER_URLS = [
     "https://github.com/ggml-org/llama.cpp/releases/download/b6471/llama-b6471-bin-ubuntu-x64.zip",
     "https://github.com/ggml-org/llama.cpp/releases/download/b6471/llama-b6471-bin-ubuntu-x64.zip",
@@ -81,9 +81,9 @@ def try_llama_cpp():
         return False
 
 def try_llama_server():
-    global llm_backend, llama_server_proc, LLAMA_SERVER_BIN
+    global llm_backend, llama_server_proc
     # 1. 确保二进制存在（从 zip 解压 or 下载）
-    if not LLAMA_SERVER_BIN.exists():
+    if not LLAMA_BIN.exists():
         zip_path = CHAT_DIR / "llama-bin.zip"
         if not zip_path.exists():
             for url in LLAMA_SERVER_URLS:
@@ -122,7 +122,7 @@ def try_llama_server():
     err_path = CHAT_DIR / "llama-server.err"
     err_fh = open(err_path, "w")
     llama_server_proc = subprocess.Popen(
-        [str(LLAMA_SERVER_BIN), "-m", str(MODEL_PATH), "--port", "8081", "-c", "128", "--threads", "2"],
+        [str(LLAMA_BIN), "-m", str(MODEL_PATH), "--port", "8081", "-c", "128", "--threads", "2"],
         stdout=subprocess.DEVNULL, stderr=err_fh,
         cwd=str(CHAT_DIR), env=env,
     )
