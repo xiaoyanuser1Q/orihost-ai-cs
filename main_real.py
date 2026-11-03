@@ -140,20 +140,22 @@ def try_llama_server():
 
 def init_llm():
     global llm_backend
+    err_log = CHAT_DIR / "init.log"
     try:
         download_model()
     except Exception as e:
-        print(f"[model] 下载失败: {e}")
+        (err_log.parent / "init.log").write_text(f"model: {e}")
         return
-    # 先试 llama-server（更轻量，不占 Python 内存）
-    if try_llama_server():
-        print("[init] 使用 llama-server")
-        return
-    # 再试 llama-cpp（编译型，占内存多）
-    if try_llama_cpp():
-        print("[init] 使用 llama-cpp")
-        return
-    print("[llm] 所有 LLM 方案失败，使用规则引擎")
+    try:
+        if try_llama_server():
+            err_log.write_text(f"OK llama_server")
+            return
+        if try_llama_cpp():
+            err_log.write_text(f"OK llama_cpp")
+            return
+        err_log.write_text(f"all failed, rules mode")
+    except Exception as e:
+        err_log.write_text(f"init crash: {e}")
 
 RULES = [
     (["下载", "下载链接", "apk", "安装"],
