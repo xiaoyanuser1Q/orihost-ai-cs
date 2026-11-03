@@ -71,7 +71,7 @@ def try_llama_cpp():
             return False
     try:
         print("[llm] 加载 llama-cpp...")
-        llm = Llama(model_path=str(MODEL_PATH), n_ctx=256, n_threads=2, verbose=False)
+        llm = Llama(model_path=str(MODEL_PATH), n_ctx=128, n_threads=2, verbose=False)
         llm_backend = "llama_cpp"
         print("[llm] llama-cpp-python 加载成功")
         return True
@@ -115,7 +115,7 @@ def try_llama_server():
         err_file = CHAT_DIR / "llama-server.err"
         err_fh = open(err_file, "w")
         llama_server_proc = subprocess.Popen(
-            [str(LLAMA_SERVER_BIN), "-m", str(MODEL_PATH), "--port", "8081", "-c", "256", "--threads", "2"],
+            [str(LLAMA_SERVER_BIN), "-m", str(MODEL_PATH), "--port", "8081", "-c", "128", "--threads", "2"],
             stdout=subprocess.DEVNULL, stderr=err_fh,
             cwd=str(CHAT_DIR),
         )
@@ -140,9 +140,13 @@ def init_llm():
     except Exception as e:
         print(f"[model] 下载失败: {e}")
         return
-    if try_llama_cpp():
-        return
+    # 先试 llama-server（更轻量，不占 Python 内存）
     if try_llama_server():
+        print("[init] 使用 llama-server")
+        return
+    # 再试 llama-cpp（编译型，占内存多）
+    if try_llama_cpp():
+        print("[init] 使用 llama-cpp")
         return
     print("[llm] 所有 LLM 方案失败，使用规则引擎")
 
