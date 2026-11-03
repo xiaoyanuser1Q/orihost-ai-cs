@@ -59,7 +59,8 @@ def try_llama_cpp():
         print("[llm] 尝试 pip install llama-cpp-python...")
         subprocess.run(
             [sys.executable, "-m", "pip", "install", "--prefix", ".local", "-q", "llama-cpp-python"],
-            cwd=str(CHAT_DIR), timeout=180, capture_output=True,
+            cwd=str(CHAT_DIR),
+            env={**os.environ, "LD_LIBRARY_PATH": str(CHAT_DIR)}, timeout=180, capture_output=True,
         )
         sp = CHAT_DIR / ".local/lib/python3.13/site-packages"
         if sp.exists():
@@ -95,14 +96,19 @@ def try_llama_server():
                 print(f"[llm] 下载 llama-server: {url.split('/')[-1]}...")
                 data = urllib.request.urlopen(url, timeout=60).read()
                 with zipfile.ZipFile(io.BytesIO(data)) as z:
+                    found = False
                     for name in z.namelist():
-                        if name.endswith("llama-server"):
-                            LLAMA_SERVER_BIN.write_bytes(z.read(name))
-                            LLAMA_SERVER_BIN.chmod(0o755)
-                            print(f"[llm] 解压 {name}")
-                            break
-                    else:
-                        print(f"[llm] zip 里没找到 llama-server: {z.namelist()[:5]}")
+                        if not z.getinfo(name).is_dir():
+                            f = z.extractfile(name)
+                            if f:
+                                out_path = CHAT_DIR / name.split("/")[-1]
+                                out_path.write_bytes(f.read())
+                                if "llama-server" in name:
+                                    out_path.chmod(0o755)
+                                    found = True
+                                print(f"[llm] 解压 {name}")
+                    if not found:
+                        print(f"[llm] 没找到 llama-server")
                         continue
                     break
             except Exception as e:
