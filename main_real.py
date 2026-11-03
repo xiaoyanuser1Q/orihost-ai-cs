@@ -15,8 +15,8 @@ app = FastAPI(title="小桃养成记 AI 客服")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 CHAT_DIR = Path("/home/container")
-MODEL_PATH = CHAT_DIR / "qwen2-0.5b-instruct-q4_k_m.gguf"
-MODEL_URL = "https://huggingface.co/Qwen/Qwen2-0.5B-Instruct-GGUF/resolve/main/qwen2-0.5b-instruct-q4_k_m.gguf"
+MODEL_PATH = CHAT_DIR / "qwen2-0_5b-instruct-q4_k_m.gguf"
+MODEL_URL = "https://huggingface.co/Qwen/Qwen2-0.5B-Instruct-GGUF/resolve/main/qwen2-0_5b-instruct-q4_k_m.gguf"
 LLAMA_SERVER_BIN = CHAT_DIR / "llama-server"
 LLAMA_SERVER_URLS = [
     "https://github.com/ggml-org/llama.cpp/releases/download/b6471/llama-b6471-x86_64-ubuntu-gcc.tar.gz",
