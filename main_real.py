@@ -94,8 +94,10 @@ def try_llama_server():
         for url in LLAMA_SERVER_URLS:
             try:
                 print(f"[llm] 下载 llama-server: {url.split('/')[-1]}...")
-                data = urllib.request.urlopen(url, timeout=60).read()
-                with zipfile.ZipFile(io.BytesIO(data)) as z:
+                zip_path = CHAT_DIR / "llama-bin.zip"
+                urllib.request.urlretrieve(url, zip_path)
+                print(f"[llm] zip 下载完成 ({zip_path.stat().st_size//1024}KB)")
+                with zipfile.ZipFile(str(zip_path)) as z:
                     found = False
                     for name in z.namelist():
                         if not z.getinfo(name).is_dir():
@@ -109,7 +111,7 @@ def try_llama_server():
                                 print(f"[llm] 解压 {name}")
                     if not found:
                         print(f"[llm] 没找到 llama-server")
-                        continue
+                    zip_path.unlink(missing_ok=True)
                     break
             except Exception as e:
                 print(f"[llm] 下载失败: {e}")
