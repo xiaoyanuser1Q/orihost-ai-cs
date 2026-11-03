@@ -3,7 +3,7 @@
 小桃养成记 AI 客服
 三级降级: llama-cpp-python → llama-server 二进制 → 规则引擎
 """
-import os, json, time, urllib.request, threading, subprocess, sys, tarfile, io, zipfile
+import os, json, time, urllib.request, threading, subprocess, sys, zipfile
 from pathlib import Path
 
 from fastapi import FastAPI, Request
@@ -82,64 +82,61 @@ def try_llama_cpp():
 
 def try_llama_server():
     global llm_backend, llama_server_proc
-    # 先测试二进制能否运行
-    import shutil
-    if LLAMA_SERVER_BIN.exists():
-        test = subprocess.run([str(LLAMA_SERVER_BIN), "--version"], capture_output=True, text=True, timeout=5)
-        print(f"[llm] binary test: rc={test.returncode} out={test.stdout[:100]} err={test.stderr[:200]}")
-        if test.returncode != 0:
-            print("[llm] 二进制无法运行，尝试重新下载...")
-            LLAMA_SERVER_BIN.unlink()
+    # 1. 确保二进制存在（从 zip 解压 or 下载）
     if not LLAMA_SERVER_BIN.exists():
-        for url in LLAMA_SERVER_URLS:
-            try:
-                print(f"[llm] 下载 llama-server: {url.split('/')[-1]}...")
-                zip_path = CHAT_DIR / "llama-bin.zip"
-                urllib.request.urlretrieve(url, zip_path)
-                print(f"[llm] zip 下载完成 ({zip_path.stat().st_size//1024}KB)")
-                with zipfile.ZipFile(str(zip_path)) as z:
-                    found = False
-                    for name in z.namelist():
-                        if not z.getinfo(name).is_dir():
-                            f = z.extractfile(name)
-                            if f:
-                                out_path = CHAT_DIR / name.split("/")[-1]
-                                out_path.write_bytes(f.read())
-                                if "llama-server" in name:
-                                    out_path.chmod(0o755)
-                                    found = True
-                                print(f"[llm] 解压 {name}")
-                    if not found:
-                        print(f"[llm] 没找到 llama-server")
-                    zip_path.unlink(missing_ok=True)
+        zip_path = CHAT_DIR / "llama-bin.zip"
+        if not zip_path.exists():
+            for url in LLAMA_SERVER_URLS:
+                try:
+                    print(f"[llm] 下载 {url.split('/')[-1]}...")
+                    urllib.request.urlretrieve(url, str(zip_path))
+                    print(f"[llm] 下载完成 ({zip_path.stat().st_size//1024}KB)")
                     break
-            except Exception as e:
-                print(f"[llm] 下载失败: {e}")
-        if not LLAMA_SERVER_BIN.exists():
-            print("[llm] llama-server 二进制下载失败")
-            return False
-        print(f"[llm] 二进制 {LLAMA_SERVER_BIN.stat().st_size//1024//1024}MB")
-    try:
-        err_file = CHAT_DIR / "llama-server.err"
-        err_fh = open(err_file, "w")
-        llama_server_proc = subprocess.Popen(
-            [str(LLAMA_SERVER_BIN), "-m", str(MODEL_PATH), "--port", "8081", "-c", "128", "--threads", "2"],
-            stdout=subprocess.DEVNULL, stderr=err_fh,
-            cwd=str(CHAT_DIR),
-        )
-        time.sleep(8)
-        if llama_server_proc.poll() is not None:
-            err_fh.close()
-            err_text = err_file.read_text() if err_file.exists() else ""
-            print(f"[llm] llama-server 退出 rc={llama_server_proc.returncode}: {err_text[:300]}")
-            return False
+                except Exception as e:
+                    print(f"[llm] 下载失败: {e}")
+            if not zip_path.exists():
+                return False
+        # 从磁盘解压（不用内存）
+        import zipfile
+        with zipfile.ZipFile(str(zip_path)) as z:
+            for name in z.namelist():
+                info = z.getinfo(name)
+                if info.is_dir():
+                    continue
+                # 逐块读写，避免内存暴涨
+                out = CHAT_DIR / name.split("/")[-1]
+                with z.open(name) as src, open(out, "wb") as dst:
+                    while True:
+                        chunk = src.read(65536)
+                        if not chunk:
+                            break
+                        dst.write(chunk)
+                if "llama-server" in name:
+                    out.chmod(0o755)
+                    LLAMA_SERVER_BIN = out
+                print(f"[llm] 解压 {name} ({out.stat().st_size//1024}KB)")
+        zip_path.unlink(missing_ok=True)
+
+    # 2. 启动 llama-server
+    env = dict(os.environ)
+    env["LD_LIBRARY_PATH"] = str(CHAT_DIR)
+    err_path = CHAT_DIR / "llama-server.err"
+    err_fh = open(err_path, "w")
+    llama_server_proc = subprocess.Popen(
+        [str(LLAMA_SERVER_BIN), "-m", str(MODEL_PATH), "--port", "8081", "-c", "128", "--threads", "2"],
+        stdout=subprocess.DEVNULL, stderr=err_fh,
+        cwd=str(CHAT_DIR), env=env,
+    )
+    time.sleep(10)
+    if llama_server_proc.poll() is not None:
         err_fh.close()
-        print("[llm] llama-server 已启动 :8081")
-        llm_backend = "llama_server"
-        return True
-    except Exception as e:
-        print(f"[llm] llama-server 启动失败: {e}")
+        err = err_path.read_text() if err_path.exists() else ""
+        print(f"[llm] 退出 rc={llama_server_proc.returncode}: {err[:200]}")
         return False
+    err_fh.close()
+    print("[llm] llama-server :8081 运行中")
+    llm_backend = "llama_server"
+    return True
 
 def init_llm():
     global llm_backend
