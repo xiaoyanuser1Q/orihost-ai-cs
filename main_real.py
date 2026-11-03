@@ -81,7 +81,7 @@ def try_llama_cpp():
         return False
 
 def try_llama_server():
-    global llm_backend, llama_server_proc
+    global llm_backend, llama_server_proc, LLAMA_SERVER_BIN
     # 1. 确保二进制存在（从 zip 解压 or 下载）
     if not LLAMA_SERVER_BIN.exists():
         zip_path = CHAT_DIR / "llama-bin.zip"
@@ -113,7 +113,6 @@ def try_llama_server():
                         dst.write(chunk)
                 if "llama-server" in name:
                     out.chmod(0o755)
-                    LLAMA_SERVER_BIN = out
                 print(f"[llm] 解压 {name} ({out.stat().st_size//1024}KB)")
         zip_path.unlink(missing_ok=True)
 
