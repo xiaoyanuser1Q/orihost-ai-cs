@@ -72,7 +72,7 @@ def try_llama_cpp():
             return False
     try:
         print("[llm] 加载 llama-cpp...")
-        llm = Llama(model_path=str(MODEL_PATH), n_ctx=128, n_threads=2, verbose=False)
+        llm = Llama(model_path=str(MODEL_PATH), n_ctx=256, n_threads=2, verbose=False)
         llm_backend = "llama_cpp"
         print("[llm] llama-cpp-python 加载成功")
         return True
@@ -122,7 +122,7 @@ def try_llama_server():
     err_path = CHAT_DIR / "llama-server.err"
     err_fh = open(err_path, "w")
     llama_server_proc = subprocess.Popen(
-        [str(LLAMA_BIN), "-m", str(MODEL_PATH), "--port", "8081", "-c", "128", "--threads", "2"],
+        [str(LLAMA_BIN), "-m", str(MODEL_PATH), "--port", "8081", "-c", "256", "--threads", "2"],
         stdout=subprocess.DEVNULL, stderr=err_fh,
         cwd=str(CHAT_DIR), env=env,
     )
@@ -190,13 +190,13 @@ def rule_reply(msg):
 
 def llm_reply(user_msg, history):
     messages = [{"role": "system", "content": SYSTEM_PROMPT}]
-    messages.extend(history[-6:])
+    messages.extend(history[-2:])
     messages.append({"role": "user", "content": user_msg})
     if llm_backend == "llama_cpp" and llm:
-        resp = llm(messages, max_tokens=256, temperature=0.7, top_p=0.9)
+        resp = llm(messages, max_tokens=128, temperature=0.7, top_p=0.9)
         return resp["choices"][0]["message"]["content"].strip()
     if llm_backend == "llama_server":
-        body = json.dumps({"messages": messages, "max_tokens": 256, "temperature": 0.7}).encode()
+        body = json.dumps({"messages": messages, "max_tokens": 128, "temperature": 0.7}).encode()
         req = urllib.request.Request(
             "http://127.0.0.1:8081/v1/chat/completions",
             data=body, headers={"Content-Type": "application/json"},
