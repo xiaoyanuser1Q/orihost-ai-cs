@@ -190,18 +190,18 @@ def rule_reply(msg):
 
 def llm_reply(user_msg, history):
     messages = [{"role": "system", "content": SYSTEM_PROMPT}]
-    messages.extend(history[-2:])
+    messages.extend(history[-1:])
     messages.append({"role": "user", "content": user_msg})
     if llm_backend == "llama_cpp" and llm:
         resp = llm(messages, max_tokens=128, temperature=0.7, top_p=0.9)
         return resp["choices"][0]["message"]["content"].strip()
     if llm_backend == "llama_server":
-        body = json.dumps({"messages": messages, "max_tokens": 128, "temperature": 0.7}).encode()
+        body = json.dumps({"messages": messages, "max_tokens": 64, "temperature": 0.7}).encode()
         req = urllib.request.Request(
             "http://127.0.0.1:8081/v1/chat/completions",
             data=body, headers={"Content-Type": "application/json"},
         )
-        with urllib.request.urlopen(req, timeout=30) as resp:
+        with urllib.request.urlopen(req, timeout=60) as resp:
             data = json.loads(resp.read().decode())
             return data["choices"][0]["message"]["content"].strip()
     return None
