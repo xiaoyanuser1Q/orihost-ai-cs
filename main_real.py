@@ -207,6 +207,12 @@ def llm_reply(user_msg, history):
     return None
 
 def get_reply(user_msg, history):
+    # A方案：规则优先（快+准），没命中再走 LLM（慢但灵活）
+    rule_answer = rule_reply(user_msg)
+    is_default = "不确定的问题建议直接看官网" in rule_answer
+    if not is_default:
+        return rule_answer  # 规则命中，直接返回
+    # 规则没命中，走 LLM
     if llm_backend != "none":
         try:
             r = llm_reply(user_msg, history)
@@ -214,7 +220,7 @@ def get_reply(user_msg, history):
                 return r
         except Exception as e:
             print(f"[llm] 推理失败: {e}")
-    return rule_reply(user_msg)
+    return rule_answer
 
 chat_history: list = []
 
