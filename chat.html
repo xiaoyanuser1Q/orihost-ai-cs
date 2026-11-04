@@ -6,231 +6,146 @@
 <title>小桃养成记 · AI 客服</title>
 <style>
   :root {
-    --bg: #0f0f1a;
-    --card: #1a1a2e;
-    --accent: #ffd700;
-    --accent2: #c83a6a;
-    --text: #e8e8f0;
-    --text-dim: #8888a0;
-    --bubble-user: #2a2a4a;
-    --bubble-ai: #1e1e36;
+    --bg: #0f0f1a; --card: #1a1a2e; --accent: #ffd700; --accent2: #c83a6a;
+    --text: #e8e8f0; --dim: #8888a0; --bu: #2a2a4a; --ba: #1e1e36;
   }
-  * { margin: 0; padding: 0; box-sizing: border-box; }
+  * { margin:0; padding:0; box-sizing:border-box; }
   body {
-    font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    height: 100vh;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
+    font-family: -apple-system,"PingFang SC","Microsoft YaHei",sans-serif;
+    background: var(--bg); color: var(--text);
+    height: 100dvh; display: flex; flex-direction: column; overflow: hidden;
   }
   .header {
-    background: var(--card);
-    padding: 12px 16px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    border-bottom: 2px solid var(--accent);
-    flex-shrink: 0;
+    background: var(--card); padding: 10px 14px;
+    display: flex; align-items: center; gap: 10px;
+    border-bottom: 2px solid var(--accent); flex-shrink: 0;
   }
-  .header .logo {
-    width: 36px; height: 36px;
-    background: var(--accent);
-    border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 18px;
+  .header .logo { width:32px;height:32px;background:var(--accent);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px; }
+  .header h1 { font-size:14px; font-weight:600; }
+  .header .sub { font-size:11px; color:var(--dim); }
+  .header .mode { margin-left:auto;font-size:11px;padding:3px 8px;border-radius:10px;background:#333;color:var(--dim); }
+  .header .mode.llm { background:var(--accent); color:#000; }
+  .notice {
+    background:#2a2a1a; color:#ffd700; font-size:12px; padding:6px 14px;
+    text-align:center; flex-shrink:0; border-bottom:1px solid #3a3a2a;
   }
-  .header h1 { font-size: 15px; font-weight: 600; }
-  .header .sub { font-size: 11px; color: var(--text-dim); }
-  .header .mode {
-    margin-left: auto;
-    font-size: 11px;
-    padding: 3px 8px;
-    border-radius: 10px;
-    background: #333;
-    color: var(--text-dim);
-  }
-  .header .mode.llm { background: var(--accent); color: #000; }
-
-  .dev-notice {
-    background: #2a2a1a;
-    color: #ffd700;
-    font-size: 12px;
-    padding: 8px 16px;
-    text-align: center;
-    flex-shrink: 0;
-    border-bottom: 1px solid #3a3a2a;
-  }
-
   .chat {
-    flex: 1;
-    overflow-y: auto;
-    padding: 16px;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    max-width: 600px;
-    width: 100%;
-    margin: 0 auto;
+    flex:1; min-height:0; overflow-y:auto; padding:14px;
+    display:flex; flex-direction:column; gap:10px;
+    max-width:600px; width:100%; margin:0 auto;
   }
-  .msg {
-    max-width: 85%;
-    padding: 10px 14px;
-    border-radius: 14px;
-    font-size: 14px;
-    line-height: 1.6;
-    white-space: pre-wrap;
-    word-break: break-word;
+  .msg { max-width:85%; padding:10px 14px; border-radius:14px; font-size:14px; line-height:1.6; white-space:pre-wrap; word-break:break-word; }
+  .msg.user { align-self:flex-end; background:var(--bu); border-bottom-right-radius:4px; }
+  .msg.ai { align-self:flex-start; background:var(--ba); border-bottom-left-radius:4px; }
+  .msg.ai::before { content:"🌸 "; font-size:12px; }
+  .msg.ai a { color:var(--accent); text-decoration:underline; word-break:break-all; }
+  .thinking {
+    align-self:flex-start; padding:10px 14px; background:var(--ba);
+    border-radius:14px; border-bottom-left-radius:4px; font-size:13px; color:var(--dim);
   }
-  .msg.user {
-    align-self: flex-end;
-    background: var(--bubble-user);
-    border-bottom-right-radius: 4px;
-  }
-  .msg.ai {
-    align-self: flex-start;
-    background: var(--bubble-ai);
-    border-bottom-left-radius: 4px;
-  }
-  .msg.ai::before { content: "🌸 "; font-size: 12px; }
-  .msg.ai a { color: var(--accent); text-decoration: underline; word-break: break-all; }
-  .typing {
-    align-self: flex-start;
-    padding: 10px 14px;
-    background: var(--bubble-ai);
-    border-radius: 14px;
-    border-bottom-left-radius: 4px;
-    font-size: 14px;
-    color: var(--text-dim);
-  }
-  .typing .dot {
-    display: inline-block;
-    width: 6px; height: 6px;
-    background: var(--text-dim);
-    border-radius: 50%;
-    margin: 0 2px;
-    animation: bounce 1.2s infinite;
-  }
-  .typing .dot:nth-child(2) { animation-delay: .2s; }
-  .typing .dot:nth-child(3) { animation-delay: .4s; }
-  @keyframes bounce {
-    0%, 80%, 100% { transform: translateY(0); opacity: .4; }
-    40% { transform: translateY(-6px); opacity: 1; }
-  }
+  .thinking .dots { display:inline-flex; gap:3px; margin-left:6px; }
+  .thinking .dots span { width:6px;height:6px;background:var(--dim);border-radius:50%;animation:bp 1.2s infinite; }
+  .thinking .dots span:nth-child(2){animation-delay:.2s}
+  .thinking .dots span:nth-child(3){animation-delay:.4s}
+  @keyframes bp { 0%,80%,100%{transform:translateY(0);opacity:.4} 40%{transform:translateY(-5px);opacity:1} }
+  .thinking .timer { margin-left:10px; font-size:11px; color:#666; }
 
+  .bottom-bar {
+    position:fixed; bottom:0; left:0; right:0;
+    background:var(--card); border-top:1px solid #2a2a3e;
+    z-index:10; flex-shrink:0;
+  }
   .quick {
-    display: flex;
-    gap: 6px;
-    flex-wrap: wrap;
-    padding: 6px 16px;
-    max-width: 600px;
-    width: 100%;
-    margin: 0 auto;
-    flex-shrink: 0;
+    display:flex; gap:6px; flex-wrap:wrap; padding:8px 14px 4px;
+    max-width:600px; margin:0 auto;
   }
   .quick span {
-    background: #2a2a4a;
-    color: var(--text);
-    padding: 5px 12px;
-    border-radius: 12px;
-    font-size: 12px;
-    cursor: pointer;
-    transition: background .2s;
+    background:var(--bu); color:var(--text); padding:4px 10px;
+    border-radius:10px; font-size:12px; cursor:pointer; transition:background .2s;
   }
-  .quick span:hover { background: var(--accent2); }
+  .quick span:hover { background:var(--accent2); }
+  .input-row {
+    display:flex; gap:8px; padding:8px 14px 12px;
+    max-width:600px; margin:0 auto;
+  }
+  .input-row input {
+    flex:1; background:var(--bg); border:1px solid #333; border-radius:10px;
+    padding:10px 14px; color:var(--text); font-size:14px; outline:none;
+  }
+  .input-row input:focus { border-color:var(--accent); }
+  .input-row button {
+    background:var(--accent); color:#000; border:none; border-radius:10px;
+    padding:10px 18px; font-size:14px; font-weight:600; cursor:pointer; flex-shrink:0;
+  }
+  .input-row button:active { transform:scale(.95); }
+  .input-row button:disabled { opacity:.5; cursor:not-allowed; }
 
-  .input-area {
-    background: var(--card);
-    padding: 10px 16px;
-    display: flex;
-    gap: 8px;
-    max-width: 600px;
-    width: 100%;
-    margin: 0 auto;
-    border-top: 1px solid #2a2a3e;
-    flex-shrink: 0;
-  }
-  .input-area input {
-    flex: 1;
-    background: var(--bg);
-    border: 1px solid #333;
-    border-radius: 10px;
-    padding: 10px 14px;
-    color: var(--text);
-    font-size: 14px;
-    outline: none;
-  }
-  .input-area input:focus { border-color: var(--accent); }
-  .input-area button {
-    background: var(--accent);
-    color: #000;
-    border: none;
-    border-radius: 10px;
-    padding: 10px 18px;
-    font-size: 14px;
-    font-weight: 600;
-    cursor: pointer;
-    flex-shrink: 0;
-  }
-  .input-area button:active { transform: scale(.95); }
+  .chat { padding-bottom: 100px; }
 </style>
 </head>
 <body>
 
 <div class="header">
   <div class="logo">🌸</div>
-  <div>
-    <h1>小桃养成记 · AI 客服</h1>
-    <div class="sub">有问题随时问～</div>
-  </div>
+  <div><h1>小桃养成记 · AI 客服</h1><div class="sub">有问题随时问～</div></div>
   <span class="mode" id="mode">检测中…</span>
 </div>
 
-<div class="dev-notice">⚠️ AI 客服正在开发中，回答可能不够准确，如有问题请以官网信息为准。</div>
+<div class="notice">⚠️ AI 客服正在开发中，回答可能不够准确，如有问题请以官网信息为准。</div>
 
 <div class="chat" id="chat">
   <div class="msg ai">你好呀！我是小桃养成记的 AI 客服 🌸
 你可以问我游戏下载、安装、登录、存档、游戏内容等问题～</div>
 </div>
 
-<div class="quick" id="quick">
-  <span data-q="下载链接在哪？">📥 下载</span>
-  <span data-q="怎么登录？">🔐 登录</span>
-  <span data-q="存档怎么同步？">💾 存档</span>
-  <span data-q="游戏结局有哪些？">🎮 结局</span>
-  <span data-q="手机闪退了怎么办？">🐛 闪退</span>
-</div>
-
-<div class="input-area">
-  <input type="text" id="input" placeholder="输入你的问题…" autocomplete="off">
-  <button onclick="send()">发送</button>
+<div class="bottom-bar">
+  <div class="quick" id="quick">
+    <span data-q="下载链接在哪？">📥 下载</span>
+    <span data-q="怎么登录？">🔐 登录</span>
+    <span data-q="存档怎么同步？">💾 存档</span>
+    <span data-q="游戏结局有哪些？">🎮 结局</span>
+    <span data-q="手机闪退了怎么办？">🐛 闪退</span>
+  </div>
+  <div class="input-row">
+    <input type="text" id="input" placeholder="输入你的问题…" autocomplete="off">
+    <button id="btn" onclick="send()">发送</button>
+  </div>
 </div>
 
 <script>
 const chat = document.getElementById("chat");
 const input = document.getElementById("input");
+const btn = document.getElementById("btn");
 
 document.getElementById("quick").addEventListener("click", e => {
   const s = e.target.closest("span[data-q]");
   if (s) { input.value = s.dataset.q; send(); }
 });
-
 input.addEventListener("keydown", e => {
   if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); }
 });
 
+let thinkTimer = null;
+
 async function send() {
   const msg = input.value.trim();
-  if (!msg) return;
+  if (!msg || btn.disabled) return;
   input.value = "";
+  btn.disabled = true;
 
   addMsg("user", msg);
-  const typing = document.createElement("div");
-  typing.className = "typing";
-  typing.innerHTML = '<span class="dot"></span><span class="dot"></span><span class="dot"></span>';
-  chat.appendChild(typing);
+  const think = document.createElement("div");
+  think.className = "thinking";
+  think.innerHTML = '🧠 正在思考<span class="dots"><span></span><span></span><span></span></span><span class="timer"></span>';
+  chat.appendChild(think);
   chat.scrollTop = chat.scrollHeight;
+
+  let sec = 0;
+  thinkTimer = setInterval(() => {
+    sec++;
+    const t = think.querySelector(".timer");
+    if (t) t.textContent = sec + "s";
+  }, 1000);
 
   try {
     const resp = await fetch("/api/chat", {
@@ -239,13 +154,16 @@ async function send() {
       body: JSON.stringify({ message: msg }),
     });
     const data = await resp.json();
-    typing.remove();
+    clearInterval(thinkTimer);
+    think.remove();
     addMsg("ai", data.reply);
     updateMode(data.mode);
   } catch (e) {
-    typing.remove();
+    clearInterval(thinkTimer);
+    think.remove();
     addMsg("ai", "抱歉，网络出了点问题，请稍后再试 🥺");
   }
+  btn.disabled = false;
 }
 
 function addMsg(type, text) {
@@ -260,9 +178,9 @@ function addMsg(type, text) {
   chat.scrollTop = chat.scrollHeight;
 }
 
-async function updateMode(mode) {
+function updateMode(mode) {
   const el = document.getElementById("mode");
-  if (mode === "llama_server" || mode === "llama_cpp") {
+  if (mode && mode !== "none" && mode !== "rules") {
     el.textContent = "🧠 LLM";
     el.classList.add("llm");
   } else {
